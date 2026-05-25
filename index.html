@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>クレジットカード決済フォーム (Firebase連携モックアップ)</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="card-form-container">
+    <h2>クレジットカード決済</h2>
+    <form id="payment-form">
+        
+        <div class="form-group">
+            <label for="card-name">カード名義 (ローマ字)</label>
+            <input type="text" id="card-name" placeholder="TARO YAMADA" required autocomplete="cc-name">
+        </div>
+
+        <div class="form-group">
+            <label for="card-number">カード番号</label>
+            <input type="text" id="card-number" placeholder="0000 0000 0000 0000" maxlength="19" required autocomplete="cc-number">
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="expiry-date">有効期限 (月/年)</label>
+                <input type="text" id="expiry-date" placeholder="MM/YY" maxlength="5" required autocomplete="cc-exp">
+            </div>
+            <div class="form-group">
+                <label for="cvc">セキュリティコード</label>
+                <input type="text" id="cvc" placeholder="123" maxlength="4" required autocomplete="cc-csc">
+            </div>
+        </div>
+
+        <button type="submit" class="submit-btn">決済する</button>
+    </form>
+    
+    <div class="security-note">
+        ※これはモックアップです。セキュリティ（PCI DSS）遵守のため、カードの生番号はデータベースに送信せず、ダミートークンを生成してFirebaseへ送信します。
+    </div>
+</div>
+
+<script type="module" src="script.js"></script>
+</body>
+</html>

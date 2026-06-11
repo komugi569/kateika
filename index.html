@@ -10,8 +10,14 @@
 
 <div class="card-form-container">
     <h2>クレジットカード決済</h2>
+    
+    <div style="text-align: right; margin-bottom: 15px;">
+        <button type="button" id="auto-fill-btn" style="font-size: 0.85em; padding: 5px 10px; cursor: pointer;">
+            テスト用データを入力
+        </button>
+    </div>
+
     <form id="payment-form">
-        
         <div class="form-group">
             <label for="card-name">カード名義 (ローマ字)</label>
             <input type="text" id="card-name" placeholder="TARO YAMADA" required autocomplete="cc-name">
@@ -41,6 +47,6 @@
     </div>
 </div>
 
-<script type="module" src="script.js"></script>
+
 </body>
 </html>

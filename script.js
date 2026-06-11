@@ -1,24 +1,25 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+// Firestoreを使用するためのインポートを追加
+import { getFirestore, collection, addDoc } from "firebase/firestore";
 
 // Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyBDik3oWDW7gWakuMv52D9fElACZSGTje0",
-  authDomain: "kateika-d687d.firebaseapp.com",
-  projectId: "kateika-d687d",
-  storageBucket: "kateika-d687d.firebasestorage.app",
-  messagingSenderId: "781009725914",
-  appId: "1:781009725914:web:6706907fb10f56c51478e3",
-  measurementId: "G-HQZVRGD0PZ"
+    apiKey: "AIzaSyBDik3oWDW7gWakuMv52D9fElACZSGTje0",
+    authDomain: "kateika-d687d.firebaseapp.com",
+    projectId: "kateika-d687d",
+    storageBucket: "kateika-d687d.firebasestorage.app",
+    messagingSenderId: "781009725914",
+    appId: "1:781009725914:web:6706907fb10f56c51478e3",
+    measurementId: "G-HQZVRGD0PZ"
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
+// Firestoreの初期化を追加
+const db = getFirestore(app);
 
 // 2. フォームの制御と送信処理
 document.addEventListener("DOMContentLoaded", () => {
@@ -27,6 +28,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const cvcInput = document.getElementById('cvc');
     const form = document.getElementById('payment-form');
     const submitBtn = document.querySelector('.submit-btn');
+
+    // ▼▼▼ 追加: テストデータ自動入力ボタンの処理 ▼▼▼
+    const autoFillBtn = document.getElementById('auto-fill-btn');
+    if (autoFillBtn) {
+        autoFillBtn.addEventListener('click', () => {
+            document.getElementById('card-name').value = 'TARO YAMADA';
+            cardNumberInput.value = '4242 4242 4242 4242';
+            expiryDateInput.value = '12/25';
+            cvcInput.value = '123';
+        });
+    }
+    // ▲▲▲ ここまで ▲▲▲
 
     // カード番号: 数字のみ許可し、4桁ごとにスペースを入れる
     cardNumberInput.addEventListener('input', (e) => {

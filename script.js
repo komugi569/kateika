@@ -92,8 +92,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 });
-
-// ▼▼▼ 追加: リアルタイム株価シミュレーションのロジック ▼▼▼
+// ▼▼▼ 変更: リアルタイム株価シミュレーションのロジック ▼▼▼
 function startSimulation(startAmount) {
     const ctx = document.getElementById('stockChart').getContext('2d');
     const currentValueDisplay = document.getElementById('current-value-display');
@@ -103,8 +102,11 @@ function startSimulation(startAmount) {
     Chart.defaults.borderColor = '#2a2e3f';
 
     let currentAmount = startAmount;
-    let labels = ['0秒'];
-    let dataPoints = [currentAmount];
+    
+    // 画面に表示するデータポイントの数（この数だけ表示し、古いものは消していく）
+    const windowSize = 30; 
+    let labels = Array(windowSize).fill('');
+    let dataPoints = Array(windowSize).fill(currentAmount);
     
     const chart = new Chart(ctx, {
         type: 'line',
@@ -113,23 +115,23 @@ function startSimulation(startAmount) {
             datasets: [{
                 label: '評価額 (円)',
                 data: dataPoints,
-                borderColor: '#ef4444', // 暴落を連想させる赤
+                borderColor: '#ef4444',
                 backgroundColor: 'rgba(239, 68, 68, 0.1)',
                 fill: true,
-                tension: 0.3,
-                pointRadius: 0 // 点を消して滑らかな線に
+                tension: 0, // ← 0にすることで「かくかく」の直線になる
+                borderWidth: 2,
+                pointRadius: 0
             }]
         },
         options: {
             responsive: true,
-            animation: {
-                duration: 400,
-                easing: 'linear'
-            },
+            animation: false, // アニメーションを切ることで即座に追従するリアルタイム感を出す
             scales: {
+                x: {
+                    display: false // スクロール時に違和感が出ないようX軸のメモリを消す
+                },
                 y: {
-                    min: startAmount * 0.3,
-                    max: startAmount * 1.1,
+                    // Y軸のmin/maxは動的に計算するためここでは指定しない
                     ticks: {
                         callback: function(value) {
                             return value.toLocaleString() + '円';
@@ -146,18 +148,18 @@ function startSimulation(startAmount) {
     currentValueDisplay.textContent = currentAmount.toLocaleString() + ' 円';
 
     let step = 0;
-    const totalSteps = 20; // 0.5秒 × 20回 = 10秒
+    const updateInterval = 100; // 0.1秒ごとに更新 (より細かく動く)
+    const totalSteps = 100;     // 0.1秒 × 100回 = 10秒間で終了
 
     const interval = setInterval(() => {
         step++;
-        labels.push((step * 0.5) + '秒');
         
         // 最終的に -50% に向かうようにベースラインを下げる
         const progress = step / totalSteps; 
         const targetBase = startAmount - (startAmount * 0.5 * progress); 
         
-        // ランダムな上下のブレ（ノイズ）を作ってリアル感を出す
-        const noise = (Math.random() - 0.5) * (startAmount * 0.1); 
+        // ランダムな上下のブレ（ノイズ）。かくかく感を出すため少し激しめに。
+        const noise = (Math.random() - 0.5) * (startAmount * 0.08); 
         
         currentAmount = targetBase + noise;
         
@@ -166,18 +168,32 @@ function startSimulation(startAmount) {
             currentAmount = startAmount * 0.5;
         }
 
+        // 新しいデータを追加し、一番古いデータを削除する（スクロール効果）
+        labels.push('');
+        labels.shift();
         dataPoints.push(currentAmount);
+        dataPoints.shift();
+
+        // ▼ ズームアップして追従する処理 ▼
+        // 現在表示されているデータの中で最大値・最小値を取得し、Y軸の範囲をそれに合わせる
+        const visibleMin = Math.min(...dataPoints);
+        const visibleMax = Math.max(...dataPoints);
+        // 上下に少しだけ余白（パディング）を持たせる
+        const padding = startAmount * 0.02;
+        chart.options.scales.y.min = visibleMin - padding;
+        chart.options.scales.y.max = visibleMax + padding;
+
         chart.update();
 
         // 画面上の数字も更新
         currentValueDisplay.textContent = Math.floor(currentAmount).toLocaleString() + ' 円';
 
-        // 10秒経過（20ステップ）で終了
+        // 10秒経過で終了
         if (step >= totalSteps) {
             clearInterval(interval);
             showResult(startAmount, currentAmount);
         }
-    }, 500); // 0.5秒ごとに更新
+    }, updateInterval);
 }
 
 function showResult(start, end) {

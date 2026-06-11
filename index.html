@@ -71,15 +71,19 @@
         </div>
     </div>
 
-    <div id="simulation-section" style="display: none;">
-        <h2 style="color: #ef4444; margin-bottom: 5px;">📉 リアルタイム運用状況</h2>
-        <p id="current-value-display" style="text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 15px; color: #ffffff;"></p>
+   <div id="simulation-section" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h2 style="color: #ef4444; margin: 0;">📉 リアルタイム運用状況</h2>
+            <p id="current-value-display" style="font-size: 2rem; font-weight: bold; margin: 0; color: #ffffff;"></p>
+        </div>
         
-        <canvas id="stockChart" width="400" height="250"></canvas>
+        <div class="chart-container">
+            <canvas id="stockChart"></canvas>
+        </div>
         
-        <div id="simulation-result" style="display:none; text-align:center; margin-top:20px; background: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #ef4444;">
-            <h3 style="color: #ef4444; margin-top: 0;">💥 運用終了 (大暴落)</h3>
-            <p id="result-detail" style="font-size: 1.1rem; line-height: 1.6; margin: 0;"></p>
+        <div id="simulation-result" style="display:none; text-align:center;">
+            <h3 style="color: #ef4444; margin-top: 0; font-size: 1.8rem;">💥 バブル崩壊 (運用終了)</h3>
+            <p id="result-detail" style="font-size: 1.3rem; line-height: 1.8; margin: 0;"></p>
         </div>
     </div>
 </div>

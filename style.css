@@ -145,3 +145,39 @@ select option {
     text-align: center;
     line-height: 1.5;
 }
+
+/* ▼▼▼ 追加: 全画面シミュレーション用のスタイル ▼▼▼ */
+#simulation-section.fullscreen-mode {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #0f111a;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.chart-container {
+    flex-grow: 1;
+    width: 100%;
+    position: relative;
+    margin-bottom: 20px;
+}
+
+#simulation-result.fullscreen-result {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(15, 17, 26, 0.9);
+    border: 2px solid #ef4444;
+    padding: 40px;
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+    width: 80%;
+    max-width: 500px;
+}

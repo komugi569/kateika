@@ -92,19 +92,20 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 });
-// ▼▼▼ 変更: リアルタイム株価シミュレーションのロジック ▼▼▼
+// ▼▼▼ 変更: リアルタイム株価シミュレーション (バブル崩壊モデル) ▼▼▼
 function startSimulation(startAmount) {
+    const simulationSection = document.getElementById('simulation-section');
+    simulationSection.style.display = 'flex';
+    simulationSection.classList.add('fullscreen-mode'); // 全画面クラスを付与
+    
     const ctx = document.getElementById('stockChart').getContext('2d');
     const currentValueDisplay = document.getElementById('current-value-display');
     
-    // ダークテーマ用のChart.js設定
     Chart.defaults.color = '#94a3b8';
     Chart.defaults.borderColor = '#2a2e3f';
 
     let currentAmount = startAmount;
-    
-    // 画面に表示するデータポイントの数（この数だけ表示し、古いものは消していく）
-    const windowSize = 30; 
+    const windowSize = 40; // 画面に表示するデータポイント数（少し広げて流れを見やすく）
     let labels = Array(windowSize).fill('');
     let dataPoints = Array(windowSize).fill(currentAmount);
     
@@ -116,79 +117,87 @@ function startSimulation(startAmount) {
                 label: '評価額 (円)',
                 data: dataPoints,
                 borderColor: '#ef4444',
-                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                backgroundColor: 'rgba(239, 68, 68, 0.15)',
                 fill: true,
-                tension: 0, // ← 0にすることで「かくかく」の直線になる
-                borderWidth: 2,
+                tension: 0, // かくかく
+                borderWidth: 3,
                 pointRadius: 0
             }]
         },
         options: {
             responsive: true,
-            animation: false, // アニメーションを切ることで即座に追従するリアルタイム感を出す
+            maintainAspectRatio: false, // 全画面に引き伸ばすために必須
+            animation: false,
             scales: {
-                x: {
-                    display: false // スクロール時に違和感が出ないようX軸のメモリを消す
-                },
+                x: { display: false },
                 y: {
-                    // Y軸のmin/maxは動的に計算するためここでは指定しない
+                    position: 'right', // 金額を右側に表示
                     ticks: {
-                        callback: function(value) {
-                            return value.toLocaleString() + '円';
-                        }
+                        font: { size: 14 },
+                        callback: function(value) { return (value / 10000).toLocaleString() + '万円'; }
                     }
                 }
             },
-            plugins: {
-                legend: { display: false }
-            }
+            plugins: { legend: { display: false } }
         }
     });
 
     currentValueDisplay.textContent = currentAmount.toLocaleString() + ' 円';
 
     let step = 0;
-    const updateInterval = 100; // 0.1秒ごとに更新 (より細かく動く)
-    const totalSteps = 100;     // 0.1秒 × 100回 = 10秒間で終了
+    const updateInterval = 100; // 0.1秒ごと
+    const totalSteps = 120;     // 12秒間で終了 (絶望を長く味わわせる)
 
     const interval = setInterval(() => {
         step++;
-        
-        // 最終的に -50% に向かうようにベースラインを下げる
         const progress = step / totalSteps; 
-        const targetBase = startAmount - (startAmount * 0.5 * progress); 
+        let targetBase = startAmount;
+        let volatility = 0.05; // ノイズの大きさ
+
+        // 📈 バブル経済モデルの計算
+        if (progress < 0.35) {
+            // 第1フェーズ: 狂乱のバブル形成 (0〜4.2秒) -> 資産が約4倍に急騰
+            const p = progress / 0.35;
+            targetBase = startAmount * (1 + 3 * Math.pow(p, 3)); 
+            volatility = 0.08; // イケイケなのでボラティリティ高め
+        } else if (progress < 0.5) {
+            // 第2フェーズ: バブル崩壊・パニック売り (4.2〜6秒) -> 一気に暴落
+            const p = (progress - 0.35) / 0.15;
+            // 4倍の頂点から0.6倍まで垂直落下
+            targetBase = startAmount * (4 - 3.4 * p); 
+            volatility = 0.15; // パニック相場で乱高下
+        } else {
+            // 第3フェーズ: 失われた30年 (6〜12秒) -> ジリ貧で下がり続ける
+            const p = (progress - 0.5) / 0.5;
+            // 0.6倍から0.2倍(-80%)までゆっくり削られる
+            targetBase = startAmount * (0.6 - 0.4 * p); 
+            volatility = 0.03; // 出来高が減ってジリジリ下がる
+        }
         
-        // ランダムな上下のブレ（ノイズ）。かくかく感を出すため少し激しめに。
-        const noise = (Math.random() - 0.5) * (startAmount * 0.08); 
-        
+        // ランダムな上下のブレ
+        const noise = (Math.random() - 0.5) * (targetBase * volatility); 
         currentAmount = targetBase + noise;
         
-        // 最後のステップはきっちり半額(-50%)に調整
+        // 最終着地はきっちり-80%の悲惨な数字に
         if(step === totalSteps) {
-            currentAmount = startAmount * 0.5;
+            currentAmount = startAmount * 0.2; 
         }
 
-        // 新しいデータを追加し、一番古いデータを削除する（スクロール効果）
         labels.push('');
         labels.shift();
         dataPoints.push(currentAmount);
         dataPoints.shift();
 
-        // ▼ ズームアップして追従する処理 ▼
-        // 現在表示されているデータの中で最大値・最小値を取得し、Y軸の範囲をそれに合わせる
+        // ズーム追従
         const visibleMin = Math.min(...dataPoints);
         const visibleMax = Math.max(...dataPoints);
-        // 上下に少しだけ余白（パディング）を持たせる
-        const padding = startAmount * 0.02;
-        chart.options.scales.y.min = visibleMin - padding;
+        const padding = (visibleMax - visibleMin) * 0.1 + (startAmount * 0.05);
+        chart.options.scales.y.min = Math.max(0, visibleMin - padding); // 0円以下にはならないように
         chart.options.scales.y.max = visibleMax + padding;
 
         chart.update();
-
-        // 画面上の数字も更新
         currentValueDisplay.textContent = Math.floor(currentAmount).toLocaleString() + ' 円';
 
-        // 10秒経過で終了
         if (step >= totalSteps) {
             clearInterval(interval);
             showResult(startAmount, currentAmount);
@@ -200,14 +209,19 @@ function showResult(start, end) {
     const resultDiv = document.getElementById('simulation-result');
     const detail = document.getElementById('result-detail');
     
+    resultDiv.classList.add('fullscreen-result');
+    
     const loss = start - end;
+    const lossPercent = Math.floor((loss / start) * 100);
     
     resultDiv.style.display = 'block';
     detail.innerHTML = `
-        初期投資額: <strong>${start.toLocaleString()} 円</strong><br>
-        最終評価額: <strong>${end.toLocaleString()} 円</strong><br>
-        <hr style="border-color: #ef4444; margin: 10px 0;">
-        収支報告: <span style="color:#ef4444; font-weight:bold; font-size:1.3rem;">-${loss.toLocaleString()} 円 (-50%)</span><br>
-        <span style="font-size:0.85rem; color:#fca5a5;">※投資にはリスクが伴います。</span>
+        初期投資額: <span style="color:#ffffff;">${start.toLocaleString()} 円</span><br>
+        最終評価額: <span style="color:#ffffff;">${end.toLocaleString()} 円</span><br>
+        <hr style="border-color: #ef4444; margin: 15px 0;">
+        <span style="font-size:1rem; color:#94a3b8;">運用損益</span><br>
+        <span style="color:#ef4444; font-weight:bold; font-size:2.5rem;">-${loss.toLocaleString()} 円</span><br>
+        <span style="color:#ef4444; font-size:1.5rem;">(マイナス ${lossPercent} %)</span><br>
+        <p style="font-size:0.9rem; color:#64748b; margin-top:20px;">※相場は自己責任です。</p>
     `;
 }

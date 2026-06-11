@@ -92,7 +92,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 });
-// ▼▼▼ 変更: リアルタイム株価シミュレーション (8秒上昇→4秒で大暴落) ▼▼▼
+
+
+// ▼▼▼ 変更: リアルタイム株価シミュレーション (ズーム廃止・現在価格を左に固定) ▼▼▼
 function startSimulation(startAmount) {
     const simulationSection = document.getElementById('simulation-section');
     simulationSection.style.display = 'flex';
@@ -102,16 +104,25 @@ function startSimulation(startAmount) {
     const currentValueDisplay = document.getElementById('current-value-display');
     const chartContainer = document.querySelector('.chart-container');
     
+    // --- 変更: 価格表示を画面左側にドカンと固定配置 ---
+    currentValueDisplay.parentElement.style.display = 'block'; // ヘッダーのflexを解除
+    currentValueDisplay.style.position = 'absolute';
+    currentValueDisplay.style.left = '5%';
+    currentValueDisplay.style.top = '40%';
+    currentValueDisplay.style.transform = 'translateY(-50%)';
+    currentValueDisplay.style.fontSize = '4.5vw'; // 画面幅に合わせた巨大文字
+    currentValueDisplay.style.fontWeight = '900';
+    currentValueDisplay.style.textShadow = '0 5px 20px rgba(0,0,0,0.8)';
+    currentValueDisplay.style.zIndex = '50';
+
     Chart.defaults.color = '#94a3b8';
     Chart.defaults.borderColor = '#2a2e3f';
 
     let currentAmount = startAmount;
     
-    // 初期状態は広く「10秒間 (100ステップ)」の枠を表示
+    // 初期状態: 100ステップの固定枠
     let dataPoints = Array(100).fill(currentAmount);
     let labels = Array(100).fill('');
-    labels[0] = '0秒';
-    labels[99] = '10秒';
     
     const chart = new Chart(ctx, {
         type: 'line',
@@ -134,13 +145,13 @@ function startSimulation(startAmount) {
             animation: false,
             scales: {
                 x: { 
-                    display: true, 
-                    grid: { color: '#2a2e3f' }
+                    display: false // リアルタイム感を出すためX軸メモリは非表示
                 },
                 y: {
-                    position: 'right',
-                    min: startAmount * 0.9, 
-                    max: startAmount * 1.1,
+                    position: 'right', // グラフが被らないようメモリは右側に
+                    // --- 変更: Y軸の拡大縮小(ズーム)を廃止し、最初から上限・下限を固定 ---
+                    min: 0, 
+                    max: startAmount * 5.5, // 資産が5倍になるのに合わせて余裕を持たせる
                     ticks: {
                         font: { size: 14 },
                         callback: function(value) { return (value / 10000).toLocaleString() + '万円'; }
@@ -171,7 +182,6 @@ function startSimulation(startAmount) {
     // 2.5秒間待機してから動き始める
     setTimeout(() => {
         startMessage.style.display = 'none'; 
-        chart.options.scales.x.display = false; 
 
         let step = 0;
         const updateInterval = 100; // 0.1秒ごと
@@ -182,48 +192,29 @@ function startSimulation(startAmount) {
             let targetBase = startAmount;
             let volatility = 0.05;
 
-            // 📈 新しいチャート構成（8秒上昇 → 4秒暴落）
+            // 📈 チャート構成（8秒上昇 → 4秒暴落）
             if (step <= 80) {
-                // 第1フェーズ: 0〜8秒 (イケイケドンドンで上がり続ける)
                 const p = step / 80;
-                // 最大5倍まで指数関数的に急騰させる
                 targetBase = startAmount * (1 + 4 * Math.pow(p, 3)); 
-                volatility = 0.05 + (0.05 * p); // ボラティリティも少しずつ上がる
+                volatility = 0.05 + (0.05 * p); 
             } else {
-                // 第2フェーズ: 8〜12秒 (最後の4秒でガクッと落ちる)
                 const p = (step - 80) / 40;
-                // 5倍の頂点から一気に0.2倍(-80%)まで垂直落下
                 targetBase = startAmount * (5 - 4.8 * p); 
-                volatility = 0.2; // パニック売りで乱高下激しめ
+                volatility = 0.2; 
             }
             
             const noise = (Math.random() - 0.5) * (targetBase * volatility); 
-            currentAmount = targetBase + noise;
+            currentAmount = Math.max(0, targetBase + noise); // マイナスにはならないよう制御
             
-            // 最後のステップはきっちり-80%に着地
             if (step === totalSteps) {
-                currentAmount = startAmount * 0.2; 
+                currentAmount = startAmount * 0.2; // 最後はきっちり-80%
             }
 
-            // ズームインの演出
-            if (dataPoints.length > 40) {
-                dataPoints.shift(); 
-                labels.shift();
-            }
-            // スクロール処理
+            // --- 変更: X軸のズーム処理を削除し、純粋に一定間隔でスクロールさせる ---
             dataPoints.shift();
             labels.shift();
-
-            // 新しいデータを追加
             dataPoints.push(currentAmount);
             labels.push('');
-
-            // Y軸の自動追従（ズーム）
-            const visibleMin = Math.min(...dataPoints);
-            const visibleMax = Math.max(...dataPoints);
-            const padding = (visibleMax - visibleMin) * 0.1 + (startAmount * 0.05);
-            chart.options.scales.y.min = Math.max(0, visibleMin - padding); 
-            chart.options.scales.y.max = visibleMax + padding;
 
             chart.update();
             currentValueDisplay.textContent = Math.floor(currentAmount).toLocaleString() + ' 円';
@@ -231,13 +222,14 @@ function startSimulation(startAmount) {
             // 12秒経過で終了・結果表示
             if (step >= totalSteps) {
                 clearInterval(interval);
+                currentValueDisplay.style.display = 'none'; // 結果画面に被らないよう価格表示を消す
                 showResult(startAmount, currentAmount);
             }
         }, updateInterval);
-    }, 2500); // 2.5秒後にスタート
+    }, 2500);
 }
 
-// ▼▼▼ 復活させた結果表示関数 (絶対に消さないでください！) ▼▼▼
+// ▼▼▼ 結果表示関数 ▼▼▼
 function showResult(start, end) {
     const resultDiv = document.getElementById('simulation-result');
     const detail = document.getElementById('result-detail');
@@ -258,4 +250,3 @@ function showResult(start, end) {
         <p style="font-size:0.9rem; color:#64748b; margin-top:20px;">※相場は自己責任です。</p>
     `;
 }
-// ▲▲▲ ここまで ▲▲

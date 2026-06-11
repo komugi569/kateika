@@ -92,8 +92,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 });
-
-// ▼▼▼ 変更: リアルタイム株価シミュレーション (スタート演出＆ズームイン追加) ▼▼▼
+// ▼▼▼ 変更: リアルタイム株価シミュレーション (8秒上昇→4秒で大暴落) ▼▼▼
 function startSimulation(startAmount) {
     const simulationSection = document.getElementById('simulation-section');
     simulationSection.style.display = 'flex';
@@ -135,12 +134,12 @@ function startSimulation(startAmount) {
             animation: false,
             scales: {
                 x: { 
-                    display: true, // 初期の0〜10秒を見せるために表示
+                    display: true, 
                     grid: { color: '#2a2e3f' }
                 },
                 y: {
                     position: 'right',
-                    min: startAmount * 0.9, // 初期表示のY軸に少し遊びを持たせる
+                    min: startAmount * 0.9, 
                     max: startAmount * 1.1,
                     ticks: {
                         font: { size: 14 },
@@ -154,7 +153,7 @@ function startSimulation(startAmount) {
 
     currentValueDisplay.textContent = currentAmount.toLocaleString() + ' 円';
 
-    // 「スタート！」のメッセージを画面中央に生成
+    // 「スタート！」のメッセージ
     const startMessage = document.createElement('div');
     startMessage.innerHTML = 'スタート！';
     startMessage.style.position = 'absolute';
@@ -171,48 +170,47 @@ function startSimulation(startAmount) {
 
     // 2.5秒間待機してから動き始める
     setTimeout(() => {
-        startMessage.style.display = 'none'; // メッセージを消す
-        chart.options.scales.x.display = false; // X軸のメモリを消してリアルタイム感を出す
+        startMessage.style.display = 'none'; 
+        chart.options.scales.x.display = false; 
 
         let step = 0;
         const updateInterval = 100; // 0.1秒ごと
-        const totalSteps = 120;     // 12秒間で終了
+        const totalSteps = 120;     // 12秒間で終了 (8秒上昇 + 4秒暴落)
 
         const interval = setInterval(() => {
             step++;
-            const progress = step / totalSteps; 
             let targetBase = startAmount;
             let volatility = 0.05;
 
-            // バブル経済モデルの計算
-            if (progress < 0.35) {
-                const p = progress / 0.35;
-                targetBase = startAmount * (1 + 3 * Math.pow(p, 3)); 
-                volatility = 0.08; 
-            } else if (progress < 0.5) {
-                const p = (progress - 0.35) / 0.15;
-                targetBase = startAmount * (4 - 3.4 * p); 
-                volatility = 0.15; 
+            // 📈 新しいチャート構成（8秒上昇 → 4秒暴落）
+            if (step <= 80) {
+                // 第1フェーズ: 0〜8秒 (イケイケドンドンで上がり続ける)
+                const p = step / 80;
+                // 最大5倍まで指数関数的に急騰させる
+                targetBase = startAmount * (1 + 4 * Math.pow(p, 3)); 
+                volatility = 0.05 + (0.05 * p); // ボラティリティも少しずつ上がる
             } else {
-                const p = (progress - 0.5) / 0.5;
-                targetBase = startAmount * (0.6 - 0.4 * p); 
-                volatility = 0.03; 
+                // 第2フェーズ: 8〜12秒 (最後の4秒でガクッと落ちる)
+                const p = (step - 80) / 40;
+                // 5倍の頂点から一気に0.2倍(-80%)まで垂直落下
+                targetBase = startAmount * (5 - 4.8 * p); 
+                volatility = 0.2; // パニック売りで乱高下激しめ
             }
             
             const noise = (Math.random() - 0.5) * (targetBase * volatility); 
             currentAmount = targetBase + noise;
             
-            if(step === totalSteps) {
+            // 最後のステップはきっちり-80%に着地
+            if (step === totalSteps) {
                 currentAmount = startAmount * 0.2; 
             }
 
-            // ▼ ズームインの演出 ▼
-            // 最初は100個あるデータを、徐々に40個まで減らすことでX軸がズームされる
+            // ズームインの演出
             if (dataPoints.length > 40) {
                 dataPoints.shift(); 
                 labels.shift();
             }
-            // 通常のスクロール処理（新しいデータを入れるために一番古いものを消す）
+            // スクロール処理
             dataPoints.shift();
             labels.shift();
 
@@ -230,6 +228,7 @@ function startSimulation(startAmount) {
             chart.update();
             currentValueDisplay.textContent = Math.floor(currentAmount).toLocaleString() + ' 円';
 
+            // 12秒経過で終了・結果表示
             if (step >= totalSteps) {
                 clearInterval(interval);
                 showResult(startAmount, currentAmount);
@@ -237,3 +236,26 @@ function startSimulation(startAmount) {
         }, updateInterval);
     }, 2500); // 2.5秒後にスタート
 }
+
+// ▼▼▼ 復活させた結果表示関数 (絶対に消さないでください！) ▼▼▼
+function showResult(start, end) {
+    const resultDiv = document.getElementById('simulation-result');
+    const detail = document.getElementById('result-detail');
+    
+    resultDiv.classList.add('fullscreen-result');
+    
+    const loss = start - end;
+    const lossPercent = Math.floor((loss / start) * 100);
+    
+    resultDiv.style.display = 'block';
+    detail.innerHTML = `
+        初期投資額: <span style="color:#ffffff;">${start.toLocaleString()} 円</span><br>
+        最終評価額: <span style="color:#ffffff;">${end.toLocaleString()} 円</span><br>
+        <hr style="border-color: #ef4444; margin: 15px 0;">
+        <span style="font-size:1rem; color:#94a3b8;">運用損益</span><br>
+        <span style="color:#ef4444; font-weight:bold; font-size:2.5rem;">-${loss.toLocaleString()} 円</span><br>
+        <span style="color:#ef4444; font-size:1.5rem;">(マイナス ${lossPercent} %)</span><br>
+        <p style="font-size:0.9rem; color:#64748b; margin-top:20px;">※相場は自己責任です。</p>
+    `;
+}
+// ▲▲▲ ここまで ▲▲▲

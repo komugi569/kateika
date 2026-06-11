@@ -258,4 +258,4 @@ function showResult(start, end) {
         <p style="font-size:0.9rem; color:#64748b; margin-top:20px;">※相場は自己責任です。</p>
     `;
 }
-// ▲▲▲ ここまで ▲▲▲
+// ▲▲▲ ここまで ▲▲

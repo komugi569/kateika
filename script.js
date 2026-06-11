@@ -93,7 +93,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-// ▼▼▼ 変更: リアルタイム株価シミュレーション (15秒構成: 13秒上昇 → 2秒で一気に暴落) ▼▼▼
+
+// ▼▼▼ 変更: リアルタイム株価シミュレーション (縦の固定を解除し、上下の移動を可視化) ▼▼▼
 function startSimulation(startAmount) {
     const simulationSection = document.getElementById('simulation-section');
     simulationSection.style.display = 'flex';
@@ -142,7 +143,10 @@ function startSimulation(startAmount) {
                 y: {
                     display: true,
                     ticks: { display: false }, 
-                    grid: { color: '#2a2e3f' }
+                    grid: { color: '#2a2e3f' },
+                    // ▼ 変更: 上下の追従(ズーム)をやめ、0円〜最大値(5.5倍)で固定する
+                    min: 0,
+                    max: startAmount * 5.5 
                 }
             },
             plugins: { legend: { display: false } }
@@ -182,13 +186,12 @@ function startSimulation(startAmount) {
                 // 第1フェーズ: 0〜13秒 (ずっと右肩上がりで5倍に到達)
                 const p = step / 130;
                 targetBase = startAmount * (1 + 4 * Math.pow(p, 3)); 
-                volatility = 0.03 + (0.05 * p); // 上昇中はブレを少しずつ大きくして煽る
+                volatility = 0.03 + (0.05 * p); 
             } else {
                 // 第2フェーズ: 13〜15秒 (たった2秒で垂直落下)
                 const p = (step - 130) / 20;
-                // 5倍の頂点から一気に0.2倍(-80%)まで叩き落とす
                 targetBase = startAmount * (5 - 4.8 * p); 
-                volatility = 0.3; // パニックで画面が激しく揺れるようにボラティリティを跳ね上げる
+                volatility = 0.3; 
             }
             
             const noise = (Math.random() - 0.5) * (targetBase * volatility); 
@@ -206,13 +209,8 @@ function startSimulation(startAmount) {
             // チャートのデータを更新
             chart.data.datasets[0].data = history.concat(Array(50).fill(null));
 
-            // 縦方向のズーム＆中央固定の計算
-            const maxDiff = Math.max(...history.map(val => Math.abs(val - currentAmount)));
-            const padding = Math.max(maxDiff * 1.5, startAmount * 0.05); 
+            // ▼ 変更: 上下の追従計算（y.min / y.max の動的変更）を削除しました ▼
             
-            chart.options.scales.y.min = currentAmount - padding; 
-            chart.options.scales.y.max = currentAmount + padding;
-
             chart.update();
 
             // 15秒経過で終了・結果表示
@@ -223,8 +221,6 @@ function startSimulation(startAmount) {
         }, updateInterval);
     }, 2500);
 }
-
-
 
 // ▼▼▼ 結果表示関数 ▼▼▼
 function showResult(start, end) {

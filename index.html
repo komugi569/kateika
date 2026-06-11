@@ -15,56 +15,72 @@
         }
       }
     </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
-<div class="card-form-container">
-    <h2>クレジットカード決済</h2>
-    
-    <div style="text-align: right; margin-bottom: 15px;">
-        <button type="button" id="auto-fill-btn" style="font-size: 0.85em; padding: 5px 10px; cursor: pointer;">
-            テスト用データを入力
-        </button>
+<div class="card-form-container" id="main-container">
+    <div id="form-section">
+        <h2>クレジットカード決済</h2>
+        
+        <div style="text-align: right; margin-bottom: 15px;">
+            <button type="button" id="auto-fill-btn" style="font-size: 0.85em; padding: 5px 10px; cursor: pointer;">
+                テスト用データを入力
+            </button>
+        </div>
+
+        <form id="payment-form">
+            <div class="form-group">
+                <label for="payment-amount">支払金額 (投資額)</label>
+                <select id="payment-amount" required>
+                    <option value="" disabled selected>選択してください</option>
+                    <option value="1000000">100万円</option>
+                    <option value="3000000">300万円</option>
+                    <option value="5000000">500万円</option>
+                    <option value="10000000">1000万円</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="card-name">カード名義 (ローマ字)</label>
+                <input type="text" id="card-name" placeholder="TARO YAMADA" required autocomplete="cc-name">
+            </div>
+
+            <div class="form-group">
+                <label for="card-number">カード番号</label>
+                <input type="text" id="card-number" placeholder="0000 0000 0000 0000" maxlength="19" required autocomplete="cc-number">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="expiry-date">有効期限 (月/年)</label>
+                    <input type="text" id="expiry-date" placeholder="MM/YY" maxlength="5" required autocomplete="cc-exp">
+                </div>
+                <div class="form-group">
+                    <label for="cvc">セキュリティコード</label>
+                    <input type="text" id="cvc" placeholder="123" maxlength="4" required autocomplete="cc-csc">
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn">決済して運用開始</button>
+        </form>
+        
+        <div class="security-note">
+            ※これはモックアップです。セキュリティ（PCI DSS）遵守のため、カードの生番号はデータベースに送信せず、ダミートークンを生成してFirebaseへ送信します。
+        </div>
     </div>
 
-    <form id="payment-form">
-        <div class="form-group">
-            <label for="payment-amount">支払金額</label>
-            <select id="payment-amount" required>
-                <option value="" disabled selected>選択してください</option>
-                <option value="1000000">100万円</option>
-                <option value="3000000">300万円</option>
-                <option value="5000000">500万円</option>
-                <option value="10000000">1000万円</option>
-            </select>
+    <div id="simulation-section" style="display: none;">
+        <h2 style="color: #ef4444; margin-bottom: 5px;">📉 リアルタイム運用状況</h2>
+        <p id="current-value-display" style="text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 15px; color: #ffffff;"></p>
+        
+        <canvas id="stockChart" width="400" height="250"></canvas>
+        
+        <div id="simulation-result" style="display:none; text-align:center; margin-top:20px; background: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #ef4444;">
+            <h3 style="color: #ef4444; margin-top: 0;">💥 運用終了 (大暴落)</h3>
+            <p id="result-detail" style="font-size: 1.1rem; line-height: 1.6; margin: 0;"></p>
         </div>
-
-        <div class="form-group">
-            <label for="card-name">カード名義 (ローマ字)</label>
-            <input type="text" id="card-name" placeholder="TARO YAMADA" required autocomplete="cc-name">
-        </div>
-
-        <div class="form-group">
-            <label for="card-number">カード番号</label>
-            <input type="text" id="card-number" placeholder="0000 0000 0000 0000" maxlength="19" required autocomplete="cc-number">
-        </div>
-
-        <div class="form-row">
-            <div class="form-group">
-                <label for="expiry-date">有効期限 (月/年)</label>
-                <input type="text" id="expiry-date" placeholder="MM/YY" maxlength="5" required autocomplete="cc-exp">
-            </div>
-            <div class="form-group">
-                <label for="cvc">セキュリティコード</label>
-                <input type="text" id="cvc" placeholder="123" maxlength="4" required autocomplete="cc-csc">
-            </div>
-        </div>
-
-        <button type="submit" class="submit-btn">決済する</button>
-    </form>
-    
-    <div class="security-note">
-        ※これはモックアップです。セキュリティ（PCI DSS）遵守のため、カードの生番号はデータベースに送信せず、ダミートークンを生成してFirebaseへ送信します。
     </div>
 </div>
 

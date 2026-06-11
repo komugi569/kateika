@@ -92,22 +92,27 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 });
-// ▼▼▼ 変更: リアルタイム株価シミュレーション (バブル崩壊モデル) ▼▼▼
+
+// ▼▼▼ 変更: リアルタイム株価シミュレーション (スタート演出＆ズームイン追加) ▼▼▼
 function startSimulation(startAmount) {
     const simulationSection = document.getElementById('simulation-section');
     simulationSection.style.display = 'flex';
-    simulationSection.classList.add('fullscreen-mode'); // 全画面クラスを付与
+    simulationSection.classList.add('fullscreen-mode'); 
     
     const ctx = document.getElementById('stockChart').getContext('2d');
     const currentValueDisplay = document.getElementById('current-value-display');
+    const chartContainer = document.querySelector('.chart-container');
     
     Chart.defaults.color = '#94a3b8';
     Chart.defaults.borderColor = '#2a2e3f';
 
     let currentAmount = startAmount;
-    const windowSize = 40; // 画面に表示するデータポイント数（少し広げて流れを見やすく）
-    let labels = Array(windowSize).fill('');
-    let dataPoints = Array(windowSize).fill(currentAmount);
+    
+    // 初期状態は広く「10秒間 (100ステップ)」の枠を表示
+    let dataPoints = Array(100).fill(currentAmount);
+    let labels = Array(100).fill('');
+    labels[0] = '0秒';
+    labels[99] = '10秒';
     
     const chart = new Chart(ctx, {
         type: 'line',
@@ -119,19 +124,24 @@ function startSimulation(startAmount) {
                 borderColor: '#ef4444',
                 backgroundColor: 'rgba(239, 68, 68, 0.15)',
                 fill: true,
-                tension: 0, // かくかく
+                tension: 0,
                 borderWidth: 3,
                 pointRadius: 0
             }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false, // 全画面に引き伸ばすために必須
+            maintainAspectRatio: false,
             animation: false,
             scales: {
-                x: { display: false },
+                x: { 
+                    display: true, // 初期の0〜10秒を見せるために表示
+                    grid: { color: '#2a2e3f' }
+                },
                 y: {
-                    position: 'right', // 金額を右側に表示
+                    position: 'right',
+                    min: startAmount * 0.9, // 初期表示のY軸に少し遊びを持たせる
+                    max: startAmount * 1.1,
                     ticks: {
                         font: { size: 14 },
                         callback: function(value) { return (value / 10000).toLocaleString() + '万円'; }
@@ -144,84 +154,86 @@ function startSimulation(startAmount) {
 
     currentValueDisplay.textContent = currentAmount.toLocaleString() + ' 円';
 
-    let step = 0;
-    const updateInterval = 100; // 0.1秒ごと
-    const totalSteps = 120;     // 12秒間で終了 (絶望を長く味わわせる)
+    // 「スタート！」のメッセージを画面中央に生成
+    const startMessage = document.createElement('div');
+    startMessage.innerHTML = 'スタート！';
+    startMessage.style.position = 'absolute';
+    startMessage.style.top = '50%';
+    startMessage.style.left = '50%';
+    startMessage.style.transform = 'translate(-50%, -50%)';
+    startMessage.style.fontSize = '5rem';
+    startMessage.style.fontWeight = 'bold';
+    startMessage.style.color = '#ef4444';
+    startMessage.style.textShadow = '0 0 30px rgba(239, 68, 68, 0.8)';
+    startMessage.style.zIndex = '10';
+    startMessage.style.letterSpacing = '5px';
+    chartContainer.appendChild(startMessage);
 
-    const interval = setInterval(() => {
-        step++;
-        const progress = step / totalSteps; 
-        let targetBase = startAmount;
-        let volatility = 0.05; // ノイズの大きさ
+    // 2.5秒間待機してから動き始める
+    setTimeout(() => {
+        startMessage.style.display = 'none'; // メッセージを消す
+        chart.options.scales.x.display = false; // X軸のメモリを消してリアルタイム感を出す
 
-        // 📈 バブル経済モデルの計算
-        if (progress < 0.35) {
-            // 第1フェーズ: 狂乱のバブル形成 (0〜4.2秒) -> 資産が約4倍に急騰
-            const p = progress / 0.35;
-            targetBase = startAmount * (1 + 3 * Math.pow(p, 3)); 
-            volatility = 0.08; // イケイケなのでボラティリティ高め
-        } else if (progress < 0.5) {
-            // 第2フェーズ: バブル崩壊・パニック売り (4.2〜6秒) -> 一気に暴落
-            const p = (progress - 0.35) / 0.15;
-            // 4倍の頂点から0.6倍まで垂直落下
-            targetBase = startAmount * (4 - 3.4 * p); 
-            volatility = 0.15; // パニック相場で乱高下
-        } else {
-            // 第3フェーズ: 失われた30年 (6〜12秒) -> ジリ貧で下がり続ける
-            const p = (progress - 0.5) / 0.5;
-            // 0.6倍から0.2倍(-80%)までゆっくり削られる
-            targetBase = startAmount * (0.6 - 0.4 * p); 
-            volatility = 0.03; // 出来高が減ってジリジリ下がる
-        }
-        
-        // ランダムな上下のブレ
-        const noise = (Math.random() - 0.5) * (targetBase * volatility); 
-        currentAmount = targetBase + noise;
-        
-        // 最終着地はきっちり-80%の悲惨な数字に
-        if(step === totalSteps) {
-            currentAmount = startAmount * 0.2; 
-        }
+        let step = 0;
+        const updateInterval = 100; // 0.1秒ごと
+        const totalSteps = 120;     // 12秒間で終了
 
-        labels.push('');
-        labels.shift();
-        dataPoints.push(currentAmount);
-        dataPoints.shift();
+        const interval = setInterval(() => {
+            step++;
+            const progress = step / totalSteps; 
+            let targetBase = startAmount;
+            let volatility = 0.05;
 
-        // ズーム追従
-        const visibleMin = Math.min(...dataPoints);
-        const visibleMax = Math.max(...dataPoints);
-        const padding = (visibleMax - visibleMin) * 0.1 + (startAmount * 0.05);
-        chart.options.scales.y.min = Math.max(0, visibleMin - padding); // 0円以下にはならないように
-        chart.options.scales.y.max = visibleMax + padding;
+            // バブル経済モデルの計算
+            if (progress < 0.35) {
+                const p = progress / 0.35;
+                targetBase = startAmount * (1 + 3 * Math.pow(p, 3)); 
+                volatility = 0.08; 
+            } else if (progress < 0.5) {
+                const p = (progress - 0.35) / 0.15;
+                targetBase = startAmount * (4 - 3.4 * p); 
+                volatility = 0.15; 
+            } else {
+                const p = (progress - 0.5) / 0.5;
+                targetBase = startAmount * (0.6 - 0.4 * p); 
+                volatility = 0.03; 
+            }
+            
+            const noise = (Math.random() - 0.5) * (targetBase * volatility); 
+            currentAmount = targetBase + noise;
+            
+            if(step === totalSteps) {
+                currentAmount = startAmount * 0.2; 
+            }
 
-        chart.update();
-        currentValueDisplay.textContent = Math.floor(currentAmount).toLocaleString() + ' 円';
+            // ▼ ズームインの演出 ▼
+            // 最初は100個あるデータを、徐々に40個まで減らすことでX軸がズームされる
+            if (dataPoints.length > 40) {
+                dataPoints.shift(); 
+                labels.shift();
+            }
+            // 通常のスクロール処理（新しいデータを入れるために一番古いものを消す）
+            dataPoints.shift();
+            labels.shift();
 
-        if (step >= totalSteps) {
-            clearInterval(interval);
-            showResult(startAmount, currentAmount);
-        }
-    }, updateInterval);
-}
+            // 新しいデータを追加
+            dataPoints.push(currentAmount);
+            labels.push('');
 
-function showResult(start, end) {
-    const resultDiv = document.getElementById('simulation-result');
-    const detail = document.getElementById('result-detail');
-    
-    resultDiv.classList.add('fullscreen-result');
-    
-    const loss = start - end;
-    const lossPercent = Math.floor((loss / start) * 100);
-    
-    resultDiv.style.display = 'block';
-    detail.innerHTML = `
-        初期投資額: <span style="color:#ffffff;">${start.toLocaleString()} 円</span><br>
-        最終評価額: <span style="color:#ffffff;">${end.toLocaleString()} 円</span><br>
-        <hr style="border-color: #ef4444; margin: 15px 0;">
-        <span style="font-size:1rem; color:#94a3b8;">運用損益</span><br>
-        <span style="color:#ef4444; font-weight:bold; font-size:2.5rem;">-${loss.toLocaleString()} 円</span><br>
-        <span style="color:#ef4444; font-size:1.5rem;">(マイナス ${lossPercent} %)</span><br>
-        <p style="font-size:0.9rem; color:#64748b; margin-top:20px;">※相場は自己責任です。</p>
-    `;
+            // Y軸の自動追従（ズーム）
+            const visibleMin = Math.min(...dataPoints);
+            const visibleMax = Math.max(...dataPoints);
+            const padding = (visibleMax - visibleMin) * 0.1 + (startAmount * 0.05);
+            chart.options.scales.y.min = Math.max(0, visibleMin - padding); 
+            chart.options.scales.y.max = visibleMax + padding;
+
+            chart.update();
+            currentValueDisplay.textContent = Math.floor(currentAmount).toLocaleString() + ' 円';
+
+            if (step >= totalSteps) {
+                clearInterval(interval);
+                showResult(startAmount, currentAmount);
+            }
+        }, updateInterval);
+    }, 2500); // 2.5秒後にスタート
 }

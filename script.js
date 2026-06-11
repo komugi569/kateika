@@ -93,8 +93,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-
-// ▼▼▼ 変更: リアルタイム株価シミュレーション (先端を画面中央に完全固定＋ズーム復活) ▼▼▼
+// ▼▼▼ 変更: リアルタイム株価シミュレーション (15秒構成: 13秒上昇 → 2秒で一気に暴落) ▼▼▼
 function startSimulation(startAmount) {
     const simulationSection = document.getElementById('simulation-section');
     simulationSection.style.display = 'flex';
@@ -103,7 +102,7 @@ function startSimulation(startAmount) {
     const ctx = document.getElementById('stockChart').getContext('2d');
     const chartContainer = document.querySelector('.chart-container');
     
-    // --- 変更: 左側のテキスト価格表示を完全に非表示 ---
+    // 左側のテキスト価格表示を完全に非表示
     document.getElementById('current-value-display').parentElement.style.display = 'none';
 
     Chart.defaults.color = '#94a3b8';
@@ -111,7 +110,7 @@ function startSimulation(startAmount) {
 
     let currentAmount = startAmount;
     
-    // --- 変更: 横方向を中央固定にするため、過去50枠・未来50枠の合計100枠を用意 ---
+    // 横方向を中央固定にするため、過去50枠・未来50枠の合計100枠を用意
     let history = Array(50).fill(currentAmount);
     let labels = Array(100).fill('');
     
@@ -121,7 +120,6 @@ function startSimulation(startAmount) {
             labels: labels,
             datasets: [{
                 label: '評価額 (円)',
-                // 過去データ(50個) ＋ 未来の空データ(50個のnull) で先端を常にX軸の中央に配置
                 data: history.concat(Array(50).fill(null)),
                 borderColor: '#ef4444',
                 backgroundColor: 'rgba(239, 68, 68, 0.15)',
@@ -138,14 +136,13 @@ function startSimulation(startAmount) {
             scales: {
                 x: { 
                     display: true, 
-                    ticks: { display: false }, // 数字は消して線だけ残す
+                    ticks: { display: false }, 
                     grid: { color: '#2a2e3f' }
                 },
                 y: {
                     display: true,
-                    ticks: { display: false }, // 右側の価格表示も消す
+                    ticks: { display: false }, 
                     grid: { color: '#2a2e3f' }
-                    // min, max は後で動的に設定
                 }
             },
             plugins: { legend: { display: false } }
@@ -173,27 +170,31 @@ function startSimulation(startAmount) {
 
         let step = 0;
         const updateInterval = 100; // 0.1秒ごと
-        const totalSteps = 120;     // 12秒間で終了
+        const totalSteps = 150;     // 15秒間で終了 (13秒上昇 + 2秒暴落)
 
         const interval = setInterval(() => {
             step++;
             let targetBase = startAmount;
             let volatility = 0.05;
 
-            // 📈 チャート構成（8秒上昇 → 4秒暴落）
-            if (step <= 80) {
-                const p = step / 80;
+            // 📈 チャート構成（15秒バージョン）
+            if (step <= 130) {
+                // 第1フェーズ: 0〜13秒 (ずっと右肩上がりで5倍に到達)
+                const p = step / 130;
                 targetBase = startAmount * (1 + 4 * Math.pow(p, 3)); 
-                volatility = 0.05 + (0.05 * p); 
+                volatility = 0.03 + (0.05 * p); // 上昇中はブレを少しずつ大きくして煽る
             } else {
-                const p = (step - 80) / 40;
+                // 第2フェーズ: 13〜15秒 (たった2秒で垂直落下)
+                const p = (step - 130) / 20;
+                // 5倍の頂点から一気に0.2倍(-80%)まで叩き落とす
                 targetBase = startAmount * (5 - 4.8 * p); 
-                volatility = 0.2; 
+                volatility = 0.3; // パニックで画面が激しく揺れるようにボラティリティを跳ね上げる
             }
             
             const noise = (Math.random() - 0.5) * (targetBase * volatility); 
             currentAmount = Math.max(0, targetBase + noise); 
             
+            // 最後のステップはきっちり-80%
             if (step === totalSteps) {
                 currentAmount = startAmount * 0.2; 
             }
@@ -205,11 +206,8 @@ function startSimulation(startAmount) {
             // チャートのデータを更新
             chart.data.datasets[0].data = history.concat(Array(50).fill(null));
 
-            // ▼▼ 縦方向のズーム＆中央固定の計算 ▼▼
-            // 今見えている過去のグラフの中で、現在価格から一番離れている差分を計算する
+            // 縦方向のズーム＆中央固定の計算
             const maxDiff = Math.max(...history.map(val => Math.abs(val - currentAmount)));
-            
-            // 現在の価格を真ん中に保つため、上下に同じだけの余白(パディング)を設定してズームを調整
             const padding = Math.max(maxDiff * 1.5, startAmount * 0.05); 
             
             chart.options.scales.y.min = currentAmount - padding; 
@@ -217,7 +215,7 @@ function startSimulation(startAmount) {
 
             chart.update();
 
-            // 12秒経過で終了・結果表示
+            // 15秒経過で終了・結果表示
             if (step >= totalSteps) {
                 clearInterval(interval);
                 showResult(startAmount, currentAmount);
@@ -225,6 +223,9 @@ function startSimulation(startAmount) {
         }, updateInterval);
     }, 2500);
 }
+
+
+
 // ▼▼▼ 結果表示関数 ▼▼▼
 function showResult(start, end) {
     const resultDiv = document.getElementById('simulation-result');

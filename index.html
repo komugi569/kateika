@@ -19,6 +19,17 @@
 
     <form id="payment-form">
         <div class="form-group">
+            <label for="payment-amount">支払金額</label>
+            <select id="payment-amount" required>
+                <option value="" disabled selected>選択してください</option>
+                <option value="1000000">100万円</option>
+                <option value="3000000">300万円</option>
+                <option value="5000000">500万円</option>
+                <option value="10000000">1000万円</option>
+            </select>
+        </div>
+
+        <div class="form-group">
             <label for="card-name">カード名義 (ローマ字)</label>
             <input type="text" id="card-name" placeholder="TARO YAMADA" required autocomplete="cc-name">
         </div>
@@ -48,16 +59,5 @@
 </div>
 
 <script type="module" src="script.js"></script>
-
-<script>
-    document.getElementById('auto-fill-btn').addEventListener('click', () => {
-        // Stripeなどの決済サービスでよく使われるテスト用カード番号をセット
-        document.getElementById('card-name').value = 'TARO YAMADA';
-        document.getElementById('card-number').value = '4242 4242 4242 4242';
-        document.getElementById('expiry-date').value = '12/25';
-        document.getElementById('cvc').value = '123';
-    });
-</script>
-
 </body>
 </html>

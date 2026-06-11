@@ -1,7 +1,6 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-// Firestoreを使用するためのインポートを追加
 import { getFirestore, collection, addDoc } from "firebase/firestore";
 
 // Your web app's Firebase configuration
@@ -18,7 +17,6 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
-// Firestoreの初期化を追加
 const db = getFirestore(app);
 
 // 2. フォームの制御と送信処理
@@ -26,20 +24,21 @@ document.addEventListener("DOMContentLoaded", () => {
     const cardNumberInput = document.getElementById('card-number');
     const expiryDateInput = document.getElementById('expiry-date');
     const cvcInput = document.getElementById('cvc');
+    const amountInput = document.getElementById('payment-amount'); // 追加
     const form = document.getElementById('payment-form');
     const submitBtn = document.querySelector('.submit-btn');
 
-    // ▼▼▼ 追加: テストデータ自動入力ボタンの処理 ▼▼▼
+    // テストデータ自動入力ボタンの処理
     const autoFillBtn = document.getElementById('auto-fill-btn');
     if (autoFillBtn) {
         autoFillBtn.addEventListener('click', () => {
+            amountInput.value = '1000000'; // 100万円をデフォルトで選択
             document.getElementById('card-name').value = 'TARO YAMADA';
             cardNumberInput.value = '4242 4242 4242 4242';
             expiryDateInput.value = '12/25';
             cvcInput.value = '123';
         });
     }
-    // ▲▲▲ ここまで ▲▲▲
 
     // カード番号: 数字のみ許可し、4桁ごとにスペースを入れる
     cardNumberInput.addEventListener('input', (e) => {
@@ -78,16 +77,18 @@ document.addEventListener("DOMContentLoaded", () => {
             // ダミートークンの生成
             const dummyStripeToken = "tok_" + Math.random().toString(36).substring(2, 15);
             const cardName = document.getElementById('card-name').value;
+            const selectedAmount = Number(amountInput.value); // 追加: 金額を数値として取得
 
             // Firebase Firestoreへ保存
             const docRef = await addDoc(collection(db, "payments"), {
+                amount: selectedAmount, // 追加: 金額データを保存
                 cardName: cardName,
                 paymentToken: dummyStripeToken,
                 status: "pending", 
                 createdAt: new Date()
             });
 
-            alert(`Firebaseへの送信が成功しました！\n保存されたドキュメントID: ${docRef.id}\n(※セキュリティ遵守のため、カードの生データは送信していません)`);
+            alert(`決済額: ${selectedAmount.toLocaleString()}円\nFirebaseへの送信が成功しました！\n保存されたドキュメントID: ${docRef.id}`);
             form.reset();
 
         } catch (error) {

@@ -47,6 +47,17 @@
     </div>
 </div>
 
+<script type="module" src="script.js"></script>
+
+<script>
+    document.getElementById('auto-fill-btn').addEventListener('click', () => {
+        // Stripeなどの決済サービスでよく使われるテスト用カード番号をセット
+        document.getElementById('card-name').value = 'TARO YAMADA';
+        document.getElementById('card-number').value = '4242 4242 4242 4242';
+        document.getElementById('expiry-date').value = '12/25';
+        document.getElementById('cvc').value = '123';
+    });
+</script>
 
 </body>
 </html>
